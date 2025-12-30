@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Use ESM imports for MCP SDK subpaths (package exports only expose subpaths)
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { initGhostApi } from './ghostApi.js';
 import { initGhostContentApi } from './ghostContentApi.js';
@@ -13,7 +13,6 @@ import {
     handlePostResource,
     handleBlogInfoResource
 } from './resources.js';
-import { configSchema, ConfigType } from './configSchema.js';
 import { registerPostTools } from "./tools/posts.js";
 import { registerMemberTools } from "./tools/members.js";
 import { registerUserTools } from "./tools/users.js";
@@ -27,31 +26,47 @@ import { registerWebhookTools } from "./tools/webhooks.js";
 import { registerPrompts } from "./prompts.js";
 import { registerDebugTools } from "./tools/debug.js";
 
-// Export the configuration schema for Smithery
-export { configSchema };
-
 /**
- * Create and configure the MCP server with HTTP transport
- * This is the main entry point for Smithery
+ * Standalone MCP server for npm users using stdio transport
  */
-export default function createServer({ config }: { config: ConfigType }) {
-    // Initialize Ghost API client with Smithery-provided runtime config
+async function main() {
+    // Read configuration from environment variables
+    const config = {
+        GHOST_API_URL: process.env.GHOST_API_URL,
+        GHOST_ADMIN_API_KEY: process.env.GHOST_ADMIN_API_KEY,
+        GHOST_CONTENT_API_KEY: process.env.GHOST_CONTENT_API_KEY,
+        GHOST_API_VERSION: process.env.GHOST_API_VERSION || 'v6.0'
+    };
+
+    // Validate required configuration
+    if (!config.GHOST_API_URL || !config.GHOST_ADMIN_API_KEY) {
+        console.error('Error: Required environment variables are missing.');
+        console.error('Please set GHOST_API_URL and GHOST_ADMIN_API_KEY');
+        console.error('Optionally set GHOST_CONTENT_API_KEY and GHOST_API_VERSION');
+        process.exit(1);
+    }
+
+    // Initialize Ghost API clients
     initGhostApi({
         url: config.GHOST_API_URL,
         key: config.GHOST_ADMIN_API_KEY,
         version: config.GHOST_API_VERSION,
     });
-    initGhostContentApi({
-        url: config.GHOST_API_URL,
-        key: config.GHOST_CONTENT_API_KEY,
-        version: config.GHOST_API_VERSION,
-    });
-    // Create an MCP server instance
+    
+    if (config.GHOST_CONTENT_API_KEY) {
+        initGhostContentApi({
+            url: config.GHOST_API_URL,
+            key: config.GHOST_CONTENT_API_KEY,
+            version: config.GHOST_API_VERSION,
+        });
+    }
+
+    // Create MCP server instance
     const server = new McpServer({
         name: "ghost-mcp-ts",
         version: "0.1.0",
         capabilities: {
-            resources: {}, // Capabilities will be enabled as handlers are registered
+            resources: {},
             tools: {},
             prompts: {},
             logging: {}
@@ -81,8 +96,22 @@ export default function createServer({ config }: { config: ConfigType }) {
     registerPrompts(server);
     registerDebugTools(server);
 
-    // Return the server instance for Smithery to handle
-    // Smithery will create the HTTP transport and connect it
-
-    return server.server;
+    // Create stdio transport and connect the server
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
 }
+
+// Handle process termination gracefully
+process.on('SIGINT', () => {
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    process.exit(0);
+});
+
+// Start the server
+main().catch((error) => {
+    console.error('Failed to start Ghost MCP server:', error);
+    process.exit(1);
+});

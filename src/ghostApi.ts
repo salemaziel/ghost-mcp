@@ -1,13 +1,47 @@
 import GhostAdminAPI from '@tryghost/admin-api';
-import { GHOST_API_URL, GHOST_ADMIN_API_KEY, GHOST_API_VERSION } from './config';
+import { GHOST_API_URL, GHOST_ADMIN_API_KEY, GHOST_API_VERSION } from './config.js';
+import jwt from 'jsonwebtoken';
 
-// Initialize and export the Ghost Admin API client instance.
-// Configuration is loaded from src/config.ts.
-export const ghostApiClient = new GhostAdminAPI({
-    url: GHOST_API_URL,
-    key: GHOST_ADMIN_API_KEY,
-    version: GHOST_API_VERSION
-});
+// Live binding that tools import. Initialized via env fallback or at runtime via initGhostApi().
+export let ghostApiClient: any;
+
+export type GhostApiConfig = {
+    url: string;
+    key: string;
+    version: string;
+};
+
+let currentConfig: GhostApiConfig | null = null;
+
+export function makeGhostApi(config: GhostApiConfig) {
+    console.log(`[ghost-mcp] Using Ghost Admin API: url=${config.url}, version=${config.version}, keyId=${config.key.substring(0, 4)}...${config.key.substring(config.key.length - 4)}`);
+    return new GhostAdminAPI({
+        url: config.url,
+        key: config.key,
+        version: config.version,
+    });
+}
+
+export function initGhostApi(config: GhostApiConfig) {
+    ghostApiClient = makeGhostApi(config);
+    currentConfig = { ...config };
+}
+
+
+export function getGhostApiConfig(): GhostApiConfig | null {
+    return currentConfig;
+}
+
+export function generateGhostAdminToken(apiKey: string): string {
+    const [id, secret] = apiKey.split(':');
+    const token = jwt.sign({}, Buffer.from(secret, 'hex'), {
+        keyid: id,
+        algorithm: 'HS256',
+        expiresIn: '5m',
+        audience: `/admin/`
+    });
+    return token;
+}
 
 // You can add helper functions here to wrap API calls and handle errors
 // For example:
