@@ -3,9 +3,6 @@
 
 FROM node:20-alpine
 
-# Install wget for health checks
-RUN apk add --no-cache wget
-
 WORKDIR /app
 
 # Copy package files
@@ -49,9 +46,9 @@ ENV PORT=8080
 ENV HOST=0.0.0.0
 ENV ANALYTICS_DIR=/app/data
 
-# Health check
+# Health check - using node's built-in http module
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD-SHELL "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"
+  CMD node -e "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 # Start the HTTP server
 CMD ["node", "build/http-server.js"]
