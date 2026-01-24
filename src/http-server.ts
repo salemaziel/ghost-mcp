@@ -612,7 +612,7 @@ app.get('/analytics/dashboard', (req: Request, res: Response) => {
         
         const ipDiv = document.createElement('div');
         ipDiv.className = 'activity-ip';
-        ipDiv.textContent = \`\${call.clientIp} - \${call.userAgent}\`;
+        ipDiv.textContent = call.clientIp + ' - ' + call.userAgent;
 
         details.appendChild(toolSpan);
         details.appendChild(ipDiv);

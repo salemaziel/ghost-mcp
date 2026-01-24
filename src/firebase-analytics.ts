@@ -42,6 +42,12 @@ class FirebaseAnalytics {
 
       const serviceAccount = JSON.parse(fs.readFileSync(credentialPath, 'utf-8'));
 
+      // Validate project ID
+      if (!serviceAccount.project_id) {
+        console.error('❌ Firebase service account missing project_id');
+        return;
+      }
+
       // Use configurable database URL or construct from project ID
       const databaseURL = process.env.FIREBASE_DATABASE_URL || 
         `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`;
