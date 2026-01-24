@@ -132,7 +132,11 @@ async function main() {
                     transport = new StreamableHTTPServerTransport({
                         sessionIdGenerator: () => randomUUID(),
                         onsessioninitialized: (newSessionId) => {
-                            transports.set(newSessionId, transport!);
+                            if (!transport) {
+                                console.error("Session initialized but transport is undefined for session", newSessionId);
+                                return;
+                            }
+                            transports.set(newSessionId, transport);
                         },
                     });
 
