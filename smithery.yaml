@@ -1,0 +1,22 @@
+# Smithery configuration for Ghost CMS MCP
+runtime: typescript
+entrypoint: src/server.ts
+config:
+  - name: GHOST_API_URL
+    type: string
+    description: The URL of your Ghost blog (e.g., https://yourblog.com)
+    required: true
+  - name: GHOST_ADMIN_API_KEY
+    type: string
+    description: Your Ghost Admin API Key
+    required: true
+  - name: GHOST_API_VERSION
+    type: string
+    description: Ghost API Version (default v6.0)
+    required: false
+    default: v6.0
+  - name: GHOST_TOKEN_EXPIRATION
+    type: number
+    description: JWT Token Expiration in seconds (default 3600)
+    required: false
+    default: 3600

@@ -1,74 +1,145 @@
-#!/usr/bin/env node
-
+import 'dotenv/config'; // Load .env file before anything else
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { ghostApiClient } from './ghostApi'; // Import the initialized Ghost API client
-import {
-    handleUserResource,
-    handleMemberResource,
-    handleTierResource,
-    handleOfferResource,
-    handleNewsletterResource,
-    handlePostResource,
-    handleBlogInfoResource
-} from './resources'; // Import resource handlers
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import express from "express";
+import cors from "cors";
 
-// Create an MCP server instance
-const server = new McpServer({
-    name: "ghost-mcp-ts",
-    version: "1.0.0", // TODO: Get version from package.json
-    capabilities: {
-        resources: {}, // Capabilities will be enabled as handlers are registered
-        tools: {},
-        prompts: {},
-        logging: {} // Enable logging capability
+/**
+ * Creates and initializes the MCP server.
+ * This function is required by smithery.ai for deployment.
+ */
+export async function createServer() {
+    // validate environment variables
+    if (!process.env.GHOST_API_URL || !process.env.GHOST_ADMIN_API_KEY) {
+        console.error("\x1b[31mError: Missing Ghost CMS configuration.\x1b[0m");
+        console.error("Please set the following environment variables:");
+        console.error("  - GHOST_API_URL: The URL of your Ghost blog (e.g., https://yourblog.com)");
+        console.error("  - GHOST_ADMIN_API_KEY: Your Ghost Admin API Key");
+        console.error("\nYou can set these in a .env file in the current directory.");
+        throw new Error("Missing Ghost CMS configuration");
     }
-});
 
-// Register resource handlers
-server.resource("user", new ResourceTemplate("user://{user_id}", { list: undefined }), handleUserResource);
-server.resource("member", new ResourceTemplate("member://{member_id}", { list: undefined }), handleMemberResource);
-server.resource("tier", new ResourceTemplate("tier://{tier_id}", { list: undefined }), handleTierResource);
-server.resource("offer", new ResourceTemplate("offer://{offer_id}", { list: undefined }), handleOfferResource);
-server.resource("newsletter", new ResourceTemplate("newsletter://{newsletter_id}", { list: undefined }), handleNewsletterResource);
-server.resource("post", new ResourceTemplate("post://{post_id}", { list: undefined }), handlePostResource);
-server.resource("blog-info", "blog://info", handleBlogInfoResource);
+    // Dynamic imports to ensure config is loaded/validated first
+    const {
+        handleUserResource,
+        handleMemberResource,
+        handleTierResource,
+        handleOfferResource,
+        handleNewsletterResource,
+        handlePostResource,
+        handleBlogInfoResource
+    } = await import('./resources.js');
 
-// Register tools
-import { registerPostTools } from "./tools/posts";
-import { registerMemberTools } from "./tools/members";
-registerPostTools(server);
-registerMemberTools(server);
-import { registerUserTools } from "./tools/users";
-registerUserTools(server);
-import { registerTagTools } from "./tools/tags";
-registerTagTools(server);
-import { registerTierTools } from "./tools/tiers";
-registerTierTools(server);
-import { registerOfferTools } from "./tools/offers";
-registerOfferTools(server);
-import { registerNewsletterTools } from "./tools/newsletters";
-registerNewsletterTools(server);
-import { registerInviteTools } from "./tools/invites";
-registerInviteTools(server);
+    // Create an MCP server instance
+    const server = new McpServer({
+        name: "ghost-mcp-ts",
+        version: "1.0.0",
+        capabilities: {
+            resources: {},
+            tools: {},
+            prompts: {},
+            logging: {}
+        }
+    });
 
-import { registerRoleTools } from "./tools/roles";
-registerRoleTools(server);
-import { registerWebhookTools } from "./tools/webhooks";
-registerWebhookTools(server);
+    // Register resource handlers
+    server.resource("user", new ResourceTemplate("user://{user_id}", { list: undefined }), handleUserResource);
+    server.resource("member", new ResourceTemplate("member://{member_id}", { list: undefined }), handleMemberResource);
+    server.resource("tier", new ResourceTemplate("tier://{tier_id}", { list: undefined }), handleTierResource);
+    server.resource("offer", new ResourceTemplate("offer://{offer_id}", { list: undefined }), handleOfferResource);
+    server.resource("newsletter", new ResourceTemplate("newsletter://{newsletter_id}", { list: undefined }), handleNewsletterResource);
+    server.resource("post", new ResourceTemplate("post://{post_id}", { list: undefined }), handlePostResource);
+    server.resource("blog-info", "blog://info", handleBlogInfoResource);
 
-import { registerPrompts } from "./prompts";
-registerPrompts(server);
+    // Register tools
+    const { registerPostTools } = await import("./tools/posts.js");
+    registerPostTools(server);
+    const { registerMemberTools } = await import("./tools/members.js");
+    registerMemberTools(server);
+    const { registerUserTools } = await import("./tools/users.js");
+    registerUserTools(server);
+    const { registerTagTools } = await import("./tools/tags.js");
+    registerTagTools(server);
+    const { registerTierTools } = await import("./tools/tiers.js");
+    registerTierTools(server);
+    const { registerOfferTools } = await import("./tools/offers.js");
+    registerOfferTools(server);
+    const { registerNewsletterTools } = await import("./tools/newsletters.js");
+    registerNewsletterTools(server);
+    const { registerInviteTools } = await import("./tools/invites.js");
+    registerInviteTools(server);
+    const { registerRoleTools } = await import("./tools/roles.js");
+    registerRoleTools(server);
+    const { registerWebhookTools } = await import("./tools/webhooks.js");
+    registerWebhookTools(server);
 
-// Set up and connect to the standard I/O transport
-async function startServer() {
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error("Ghost MCP TypeScript Server running on stdio"); // Log to stderr
+    const { registerWorkflowTools } = await import("./tools/workflows.js");
+    registerWorkflowTools(server);
+
+    const { registerPrompts } = await import("./prompts.js");
+    registerPrompts(server);
+
+    return server;
 }
 
-// Start the server
-startServer().catch((error: any) => { // Add type annotation for error
-    console.error("Fatal error starting server:", error);
-    process.exit(1);
-});
+async function main() {
+    // Parse command line arguments
+    const args = process.argv.slice(2);
+    const transportType = args.includes('--transport') ? args[args.indexOf('--transport') + 1] : 'stdio';
+    const port = args.includes('--port') ? parseInt(args[args.indexOf('--port') + 1]) : 3000;
+
+    const server = await createServer();
+
+    // Handle transports
+    if (transportType === 'sse') {
+        const app = express();
+        
+        // Use CORS to allow requests from any origin (configure as needed for production)
+        app.use(cors());
+        app.use(express.json());
+
+        let transport: SSEServerTransport;
+
+        app.get("/sse", async (req, res) => {
+            console.error(`New SSE connection`);
+            transport = new SSEServerTransport("/sse", res);
+            await server.connect(transport);
+            
+            // Handle connection close
+            res.on("close", () => {
+                console.error("SSE connection closed");
+                // Do not close the MCP server, allowing for reconnections
+                // server.close(); 
+            });
+        });
+
+        app.post("/sse", async (req, res) => {
+            if (!transport) {
+                res.status(400).send("No active connection");
+                return;
+            }
+            await transport.handlePostMessage(req, res);
+        });
+
+        app.listen(port, () => {
+            console.error(`Ghost MCP Server running on SSE at http://localhost:${port}/sse`);
+            console.error(`Use 'http://localhost:${port}/sse' as the Server URL in your MCP Client`);
+        });
+
+    } else {
+        // Default to Stdio
+        const transport = new StdioServerTransport();
+        await server.connect(transport);
+        console.error("Ghost MCP TypeScript Server running on stdio");
+    }
+}
+
+// Start the server if it's the main module
+if (import.meta.url === `file://${process.argv[1]}` || process.argv[1].endsWith('server.js')) {
+    main().catch((error: any) => {
+        console.error("Fatal error starting server:", error);
+        process.exit(1);
+    });
+}
+

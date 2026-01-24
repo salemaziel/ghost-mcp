@@ -1,7 +1,7 @@
 // src/tools/members.ts
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ghostApiClient } from "../ghostApi";
+import { ghostApiClient } from "../ghostApi.js";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -37,6 +37,7 @@ export function registerMemberTools(server: McpServer) {
   // Browse members
   server.tool(
     "members_browse",
+    "Browse members with filtering and pagination.",
     browseParams,
     async (args, _extra) => {
       const members = await ghostApiClient.members.browse(args);
@@ -54,6 +55,7 @@ export function registerMemberTools(server: McpServer) {
   // Read member
   server.tool(
     "members_read",
+    "Read a single member by ID or email.",
     readParams,
     async (args, _extra) => {
       const member = await ghostApiClient.members.read(args);
@@ -71,6 +73,7 @@ export function registerMemberTools(server: McpServer) {
   // Add member
   server.tool(
     "members_add",
+    "Create a new member.",
     addParams,
     async (args, _extra) => {
       const member = await ghostApiClient.members.add(args);
@@ -88,6 +91,7 @@ export function registerMemberTools(server: McpServer) {
   // Edit member
   server.tool(
     "members_edit",
+    "Update an existing member.",
     editParams,
     async (args, _extra) => {
       const member = await ghostApiClient.members.edit(args);
@@ -105,6 +109,7 @@ export function registerMemberTools(server: McpServer) {
   // Delete member
   server.tool(
     "members_delete",
+    "Delete a member by ID.",
     deleteParams,
     async (args, _extra) => {
       await ghostApiClient.members.delete(args);

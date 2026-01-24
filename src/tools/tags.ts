@@ -1,7 +1,7 @@
 // src/tools/tags.ts
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ghostApiClient } from "../ghostApi";
+import { ghostApiClient } from "../ghostApi.js";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -35,6 +35,7 @@ export function registerTagTools(server: McpServer) {
   // Browse tags
   server.tool(
     "tags_browse",
+    "Browse tags with filtering.",
     browseParams,
     async (args, _extra) => {
       const tags = await ghostApiClient.tags.browse(args);
@@ -52,6 +53,7 @@ export function registerTagTools(server: McpServer) {
   // Read tag
   server.tool(
     "tags_read",
+    "Read a single tag by ID or slug.",
     readParams,
     async (args, _extra) => {
       const tag = await ghostApiClient.tags.read(args);
@@ -69,6 +71,7 @@ export function registerTagTools(server: McpServer) {
   // Add tag
   server.tool(
     "tags_add",
+    "Create a new tag.",
     addParams,
     async (args, _extra) => {
       const tag = await ghostApiClient.tags.add(args);
@@ -86,6 +89,7 @@ export function registerTagTools(server: McpServer) {
   // Edit tag
   server.tool(
     "tags_edit",
+    "Update an existing tag.",
     editParams,
     async (args, _extra) => {
       const tag = await ghostApiClient.tags.edit(args);
@@ -103,6 +107,7 @@ export function registerTagTools(server: McpServer) {
   // Delete tag
   server.tool(
     "tags_delete",
+    "Delete a tag by ID.",
     deleteParams,
     async (args, _extra) => {
       await ghostApiClient.tags.delete(args);

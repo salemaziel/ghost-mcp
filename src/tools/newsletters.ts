@@ -1,7 +1,7 @@
 // src/tools/newsletters.ts
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ghostApiClient } from "../ghostApi";
+import { ghostApiClient } from "../ghostApi.js";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -60,6 +60,7 @@ export function registerNewsletterTools(server: McpServer) {
   // Browse newsletters
   server.tool(
     "newsletters_browse",
+    "Browse newsletters.",
     browseParams,
     async (args, _extra) => {
       const newsletters = await ghostApiClient.newsletters.browse(args);
@@ -77,6 +78,7 @@ export function registerNewsletterTools(server: McpServer) {
   // Read newsletter
   server.tool(
     "newsletters_read",
+    "Read a single newsletter.",
     readParams,
     async (args, _extra) => {
       const newsletter = await ghostApiClient.newsletters.read(args);
@@ -94,6 +96,7 @@ export function registerNewsletterTools(server: McpServer) {
   // Add newsletter
   server.tool(
     "newsletters_add",
+    "Create a new newsletter.",
     addParams,
     async (args, _extra) => {
       const newsletter = await ghostApiClient.newsletters.add(args);
@@ -111,6 +114,7 @@ export function registerNewsletterTools(server: McpServer) {
   // Edit newsletter
   server.tool(
     "newsletters_edit",
+    "Update an existing newsletter.",
     editParams,
     async (args, _extra) => {
       const newsletter = await ghostApiClient.newsletters.edit(args);
@@ -128,6 +132,7 @@ export function registerNewsletterTools(server: McpServer) {
   // Delete newsletter
   server.tool(
     "newsletters_delete",
+    "Delete a newsletter.",
     deleteParams,
     async (args, _extra) => {
       await ghostApiClient.newsletters.delete(args);

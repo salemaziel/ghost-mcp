@@ -13,3 +13,11 @@ wheels/
 node_modules/
 build/
 knowledge/
+
+.env
+
+firebase-debug.log
+
+package-lock.json
+
+.gemini/

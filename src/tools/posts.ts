@@ -1,7 +1,7 @@
 // src/tools/posts.ts
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ghostApiClient } from "../ghostApi";
+import { ghostApiClient } from "../ghostApi.js";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -36,6 +36,7 @@ export function registerPostTools(server: McpServer) {
   // Browse posts
   server.tool(
     "posts_browse",
+    "Browse posts with optional filtering and pagination.",
     browseParams,
     async (args, _extra) => {
       const posts = await ghostApiClient.posts.browse(args);
@@ -53,6 +54,7 @@ export function registerPostTools(server: McpServer) {
   // Read post
   server.tool(
     "posts_read",
+    "Read a single post by ID or slug.",
     readParams,
     async (args, _extra) => {
       const post = await ghostApiClient.posts.read(args);
@@ -70,6 +72,7 @@ export function registerPostTools(server: McpServer) {
   // Add post
   server.tool(
     "posts_add",
+    "Create a new post with optional HTML/Lexical content.",
     addParams,
     async (args, _extra) => {
       // If html is present, use source: "html" to ensure Ghost uses the html content
@@ -89,6 +92,7 @@ export function registerPostTools(server: McpServer) {
   // Edit post
   server.tool(
     "posts_edit",
+    "Update an existing post by ID.",
     editParams,
     async (args, _extra) => {
       // If html is present, use source: "html" to ensure Ghost uses the html content for updates
@@ -108,6 +112,7 @@ export function registerPostTools(server: McpServer) {
   // Delete post
   server.tool(
     "posts_delete",
+    "Delete a post by ID.",
     deleteParams,
     async (args, _extra) => {
       await ghostApiClient.posts.delete(args);

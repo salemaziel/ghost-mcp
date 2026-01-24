@@ -1,7 +1,7 @@
 // src/tools/users.ts
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ghostApiClient } from "../ghostApi";
+import { ghostApiClient } from "../ghostApi.js";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -35,6 +35,7 @@ export function registerUserTools(server: McpServer) {
   // Browse users
   server.tool(
     "users_browse",
+    "Browse users (authors/staff).",
     browseParams,
     async (args, _extra) => {
       const users = await ghostApiClient.users.browse(args);
@@ -52,6 +53,7 @@ export function registerUserTools(server: McpServer) {
   // Read user
   server.tool(
     "users_read",
+    "Read a single user by ID, email, or slug.",
     readParams,
     async (args, _extra) => {
       const user = await ghostApiClient.users.read(args);
@@ -69,6 +71,7 @@ export function registerUserTools(server: McpServer) {
   // Edit user
   server.tool(
     "users_edit",
+    "Update a user profile.",
     editParams,
     async (args, _extra) => {
       const user = await ghostApiClient.users.edit(args);
@@ -86,6 +89,7 @@ export function registerUserTools(server: McpServer) {
   // Delete user
   server.tool(
     "users_delete",
+    "Delete a user by ID.",
     deleteParams,
     async (args, _extra) => {
       await ghostApiClient.users.delete(args);

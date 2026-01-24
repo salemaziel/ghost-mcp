@@ -1,7 +1,7 @@
 // src/tools/tiers.ts
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ghostApiClient } from "../ghostApi";
+import { ghostApiClient } from "../ghostApi.js";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -47,6 +47,7 @@ export function registerTierTools(server: McpServer) {
   // Browse tiers
   server.tool(
     "tiers_browse",
+    "Browse membership tiers.",
     browseParams,
     async (args, _extra) => {
       const tiers = await ghostApiClient.tiers.browse(args);
@@ -64,6 +65,7 @@ export function registerTierTools(server: McpServer) {
   // Read tier
   server.tool(
     "tiers_read",
+    "Read a single tier.",
     readParams,
     async (args, _extra) => {
       const tier = await ghostApiClient.tiers.read(args);
@@ -81,6 +83,7 @@ export function registerTierTools(server: McpServer) {
   // Add tier
   server.tool(
     "tiers_add",
+    "Create a new membership tier.",
     addParams,
     async (args, _extra) => {
       const tier = await ghostApiClient.tiers.add(args);
@@ -98,6 +101,7 @@ export function registerTierTools(server: McpServer) {
   // Edit tier
   server.tool(
     "tiers_edit",
+    "Update an existing tier.",
     editParams,
     async (args, _extra) => {
       const tier = await ghostApiClient.tiers.edit(args);
@@ -115,6 +119,7 @@ export function registerTierTools(server: McpServer) {
   // Delete tier
   server.tool(
     "tiers_delete",
+    "Delete a tier.",
     deleteParams,
     async (args, _extra) => {
       await ghostApiClient.tiers.delete(args);

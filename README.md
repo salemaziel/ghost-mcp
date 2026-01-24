@@ -1,27 +1,11 @@
 # Ghost MCP Server
 
-## ‼️ Important Notice: Python to TypeScript Migration
-I've completely rewritten the Ghost MCP Server from Python to TypeScript in this v0.1.0 release. This major change brings several benefits:
-
-- Simplified installation: Now available as an NPM package (@fanyangmeng/ghost-mcp)
-- Improved reliability: Uses the official @tryghost/admin-api client instead of custom implementation
-- Better maintainability: TypeScript provides type safety and better code organization
-- Streamlined configuration: Simple environment variable setup
-
-### Breaking Changes
-
-- Python dependencies are no longer required
-- Configuration method has changed (now using Node.js environment variables)
-- Docker deployment has been simplified
-- Different installation process (now using NPM)
-
-Please see the below updated documentation for details on migrating from the Python version. If you encounter any issues, feel free to open an issue on GitHub.
+# **Currently not working**
 
 ---
 
 A Model Context Protocol (MCP) server for interacting with Ghost CMS through LLM interfaces like Claude. This server provides secure and comprehensive access to your Ghost blog, leveraging JWT authentication and a rich set of MCP tools for managing posts, users, members, tiers, offers, and newsletters.
 
-![demo](./assets/ghost-mcp-demo.gif)
 
 ## Features
 
@@ -34,22 +18,68 @@ A Model Context Protocol (MCP) server for interacting with Ghost CMS through LLM
 
 ## Usage
 
-To use this with MCP clients, for instance, Claude Desktop, add the following to your `claude_desktop_config.json`:
+### Configuration
+
+The server requires the following configuration variables. You can set them as environment variables or create a `.env` file in the project directory:
+
+- `GHOST_API_URL`: The URL of your Ghost blog (e.g., `https://yourblog.com`)
+- `GHOST_ADMIN_API_KEY`: Your Ghost Admin API key
+- `GHOST_API_VERSION`: (Optional) API version, defaults to `v5.0`
+
+### Running via Stdio (Default)
+
+To use this with MCP clients like Claude Desktop, you need to point to your local build. Add the following to your `claude_desktop_config.json`:
+
 ```json
 {
   "mcpServers": {
-      "ghost-mcp": {
-        "command": "npx",
-        "args": ["-y", "@fanyangmeng/ghost-mcp"],
-        "env": {
-            "GHOST_API_URL": "https://yourblog.com",
-            "GHOST_ADMIN_API_KEY": "your_admin_api_key",
-            "GHOST_API_VERSION": "v5.0"
-        }
+    "ghost-mcp": {
+      "command": "node",
+      "args": ["/absolute/path/to/ghost-mcp/build/server.js"],
+      "env": {
+        "GHOST_API_URL": "https://yourblog.com",
+        "GHOST_ADMIN_API_KEY": "your_admin_api_key"
       }
     }
+  }
 }
 ```
+
+### Running via HTTP/SSE (Remote Mode)
+
+This mode is essential for MCP clients that cannot spawn local processes (like web-based clients, ChatGPT, or dockerized environments) or when you want to run the MCP server on a different machine than the client.
+
+To start the server in SSE mode:
+
+```bash
+# Run with default port 3000
+npm start -- --transport sse
+
+# Run with custom port
+npm start -- --transport sse --port 8080
+```
+
+#### Endpoints
+Once running, the server exposes two critical endpoints:
+
+1.  **SSE Endpoint (`GET /sse`)**:
+    -   **URL:** `http://localhost:3000/sse` (replace port if changed)
+    -   **Usage:** The MCP client connects to this URL to receive server-sent events (notifications and responses). This initiates the session.
+
+2.  **Message Endpoint (`POST /sse`)**:
+    -   **URL:** `http://localhost:3000/sse`
+    -   **Usage:** The MCP client sends JSON-RPC requests (like `tools/list` or `tools/call`) to this endpoint via HTTP POST.
+
+#### Example Configuration for Remote Clients
+If you are configuring an MCP client that asks for a "Server URL" or "SSE URL", providing the `/sse` endpoint is usually sufficient, as the server handles the handshake.
+
+**For example:**
+-   **Server URL:** `http://your-server-ip:3000/sse`
+
+### CLI Arguments
+
+- `--transport <stdio|sse>`: Select the transport mode (default: `stdio`).
+- `--port <number>`: Set the port for SSE mode (default: `3000`).
 
 ## Available Resources
 

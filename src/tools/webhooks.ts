@@ -1,7 +1,7 @@
 // src/tools/webhooks.ts
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ghostApiClient } from "../ghostApi";
+import { ghostApiClient } from "../ghostApi.js";
 
 // Parameter schemas as ZodRawShape (object literals)
 const addParams = {
@@ -27,6 +27,7 @@ export function registerWebhookTools(server: McpServer) {
   // Add webhook
   server.tool(
     "webhooks_add",
+    "Create a webhook.",
     addParams,
     async (args, _extra) => {
       const webhook = await ghostApiClient.webhooks.add(args);
@@ -44,6 +45,7 @@ export function registerWebhookTools(server: McpServer) {
   // Edit webhook
   server.tool(
     "webhooks_edit",
+    "Update a webhook.",
     editParams,
     async (args, _extra) => {
       const webhook = await ghostApiClient.webhooks.edit(args);
@@ -61,6 +63,7 @@ export function registerWebhookTools(server: McpServer) {
   // Delete webhook
   server.tool(
     "webhooks_delete",
+    "Delete a webhook.",
     deleteParams,
     async (args, _extra) => {
       await ghostApiClient.webhooks.delete(args);

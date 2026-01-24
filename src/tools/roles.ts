@@ -1,7 +1,7 @@
 // src/tools/roles.ts
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ghostApiClient } from "../ghostApi";
+import { ghostApiClient } from "../ghostApi.js";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -19,6 +19,7 @@ export function registerRoleTools(server: McpServer) {
   // Browse roles
   server.tool(
     "roles_browse",
+    "Browse available roles.",
     browseParams,
     async (args, _extra) => {
       const roles = await ghostApiClient.roles.browse(args);
@@ -36,6 +37,7 @@ export function registerRoleTools(server: McpServer) {
   // Read role
   server.tool(
     "roles_read",
+    "Read role details.",
     readParams,
     async (args, _extra) => {
       const role = await ghostApiClient.roles.read(args);
