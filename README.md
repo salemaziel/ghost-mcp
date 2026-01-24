@@ -45,41 +45,44 @@ To use this with MCP clients like Claude Desktop, you need to point to your loca
 }
 ```
 
-### Running via HTTP/SSE (Remote Mode)
+### Running via Streamable HTTP (Remote Mode)
 
-This mode is essential for MCP clients that cannot spawn local processes (like web-based clients, ChatGPT, or dockerized environments) or when you want to run the MCP server on a different machine than the client.
+This mode is essential for MCP clients that cannot spawn local processes (like web-based clients, ChatGPT, or dockerized environments) or when you want to run the MCP server on a different machine than the client. Streamable HTTP is the preferred remote transport.
 
-To start the server in SSE mode:
+To start the server in streamable HTTP mode:
 
 ```bash
 # Run with default port 3000
-npm start -- --transport sse
+npm start -- --transport streamable
 
 # Run with custom port
-npm start -- --transport sse --port 8080
+npm start -- --transport streamable --port 8080
 ```
 
 #### Endpoints
-Once running, the server exposes two critical endpoints:
+Once running, the server exposes a single streamable endpoint:
 
-1.  **SSE Endpoint (`GET /sse`)**:
-    -   **URL:** `http://localhost:3000/sse` (replace port if changed)
-    -   **Usage:** The MCP client connects to this URL to receive server-sent events (notifications and responses). This initiates the session.
-
-2.  **Message Endpoint (`POST /sse`)**:
-    -   **URL:** `http://localhost:3000/sse`
-    -   **Usage:** The MCP client sends JSON-RPC requests (like `tools/list` or `tools/call`) to this endpoint via HTTP POST.
+1.  **Streamable HTTP Endpoint (`POST /mcp`)**:
+    -   **URL:** `http://localhost:3000/mcp` (replace port if changed)
+    -   **Usage:** The MCP client sends JSON-RPC requests (like `tools/list` or `tools/call`) to this endpoint via HTTP POST. The server handles streaming responses through the same transport.
 
 #### Example Configuration for Remote Clients
-If you are configuring an MCP client that asks for a "Server URL" or "SSE URL", providing the `/sse` endpoint is usually sufficient, as the server handles the handshake.
+If you are configuring an MCP client that asks for a "Server URL", providing the `/mcp` endpoint is usually sufficient, as the server handles the handshake.
 
 **For example:**
--   **Server URL:** `http://your-server-ip:3000/sse`
+-   **Server URL:** `http://your-server-ip:3000/mcp`
+
+#### Using the MCP Inspector
+The MCP Inspector can connect directly to the streamable endpoint for debugging:
+
+```bash
+npx @modelcontextprotocol/inspector http://localhost:3000/mcp
+```
 
 ### CLI Arguments
 
-- `--transport <stdio|sse>`: Select the transport mode (default: `stdio`).
-- `--port <number>`: Set the port for SSE mode (default: `3000`).
+- `--transport <stdio|sse|streamable>`: Select the transport mode (default: `stdio`, but defaults to `streamable` when `--port` is provided).
+- `--port <number>`: Set the port for HTTP modes (default: `3000`).
 
 ## Available Resources
 
