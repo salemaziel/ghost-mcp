@@ -12,6 +12,9 @@ This Model Context Protocol (MCP) server provides a powerful and flexible way to
 - **Enhanced Error Handling**: Provides detailed status codes and response bodies.
 - **Modern Transport**: Exclusively uses the Streamable HTTP transport, with all deprecated STDIO logic removed.
 - **Diagnostic Tools**: Includes tools for troubleshooting API connectivity and configuration.
+- **Multi-Tenant Support**: Accepts Ghost API credentials via URL query parameters for public/shared deployments.
+- **Firebase Analytics**: Cloud-based analytics storage with Firebase Realtime Database and local file backup.
+- **VPS Deployment Ready**: Docker, Nginx, and GitHub Actions auto-deployment support.
 
 ## Installation & Usage
 
@@ -67,6 +70,48 @@ npm run dev
 ```
 
 This will start the server on port 8080 and open the Smithery Playground in your browser.
+
+### Method 3: Self-Hosted VPS with URL Query Parameters
+
+For public/shared deployments, this MCP server can be self-hosted on a VPS and accepts Ghost API credentials via URL query parameters. This allows multiple users to connect their own Ghost instances without server-side configuration.
+
+#### MCP URL Format
+
+```
+https://your-domain.com/ghostcms/mcp?url=YOUR_GHOST_URL&key=YOUR_ADMIN_API_KEY&version=v5.0
+```
+
+**Query Parameters:**
+
+| Parameter | Required | Description | Example |
+|-----------|----------|-------------|---------|
+| `url` | Yes | Your Ghost site URL (with `https://`) | `https://myblog.ghost.io` |
+| `key` | Yes | Ghost Admin API Key (`id:secret` format) | `abc123:def456...` |
+| `version` | No | Ghost API version (default: `v5.0`) | `v5.0` or `v6.0` |
+
+#### Example Usage with Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "ghost-myblog": {
+      "type": "streamable-http",
+      "url": "https://mcp.yourdomain.com/ghostcms/mcp?url=https://myblog.ghost.io&key=YOUR_ADMIN_API_KEY"
+    }
+  }
+}
+```
+
+#### Live Demo
+
+A public instance is available at:
+```
+https://mcp.techmavie.digital/ghostcms/mcp?url=YOUR_GHOST_URL&key=YOUR_ADMIN_API_KEY
+```
+
+> **Note:** The `https://` prefix is automatically added if missing from the URL parameter.
 
 ### Configuration
 
@@ -200,6 +245,167 @@ If you encounter authentication or "Resource not found" errors:
 2.  Ensure your `GHOST_API_URL` is the correct domain for your Ghost instance.
 3.  Use the `admin_site_ping` tool to verify that the Admin API endpoint is reachable.
 4.  Check the server logs for the actual configuration being used.
+
+#### MCP Streamable HTTP Requirements
+
+This server implements the MCP Streamable HTTP transport with proper session management and Accept header handling. The server automatically injects `text/event-stream` into Accept headers and creates isolated transport instances per request to prevent session conflicts.
+
+**Testing the endpoint with proper MCP initialization:**
+```bash
+# Test MCP initialization (proper way to test)
+curl -s -X POST \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' \
+  "https://mcp.techmavie.digital/ghostcms/mcp?url=https://your-site.com&key=YOUR_KEY"
+
+# Expected response (SSE format):
+# event: message
+# data: {"result":{"protocolVersion":"2024-11-05","capabilities":{...},"serverInfo":{...}},"jsonrpc":"2.0","id":1}
+```
+
+**Note:** Simple GET/POST requests without MCP initialization will return protocol errors like `"Bad Request: Server not initialized"` - this is expected behavior. The endpoint requires proper MCP protocol handshake.
+
+**For MCP Clients (Claude Desktop, Claude iOS, Claude Code):**
+- MCP clients automatically handle the initialization protocol and session management
+- Ensure your MCP URL is correctly formatted in your client configuration
+- For Claude iOS, use the Connectors feature with the full MCP URL including query parameters
+- For Claude Code, add the server to your MCP settings with type `streamable-http`
+
+**Session Management:**
+- The server creates a new transport instance for each HTTP request (stateless pattern)
+- Each client connection gets a unique session ID automatically
+- Multiple clients can connect simultaneously without session conflicts
+- Sessions are automatically cleaned up after responses are sent
+
+**Common Errors and Solutions:**
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `"Not Acceptable: Client must accept text/event-stream"` | Old server version | Update to latest version - this is fixed |
+| `"Bad Request: Server not initialized"` | Testing without MCP protocol | Use proper MCP initialization (see example above) |
+| `"Mcp-Session-Id header is required"` | Old server version with session conflicts | Update to latest version - this is fixed |
+| `"Server already initialized"` | Old server version reusing transports | Update to latest version - this is fixed |
+
+## VPS Deployment
+
+This MCP server includes full support for self-hosted VPS deployment with Docker, Nginx, and GitHub Actions auto-deployment.
+
+### Architecture
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Claude/MCP     │────▶│  Nginx Proxy    │────▶│  Docker         │
+│  Client         │     │  /ghostcms/     │     │  Container      │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                                                        │
+                                                        ▼
+                                                ┌─────────────────┐
+                                                │  Ghost CMS      │
+                                                │  Admin API      │
+                                                └─────────────────┘
+```
+
+### Deployment Files
+
+The repository includes:
+
+- **`Dockerfile`** - Container configuration with Node.js 20-alpine
+- **`docker-compose.yml`** - Docker orchestration with volumes for analytics and Firebase credentials
+- **`deploy/nginx-mcp.conf`** - Nginx reverse proxy configuration
+- **`.github/workflows/deploy-vps.yml`** - GitHub Actions auto-deployment workflow
+
+### Quick Deploy
+
+```bash
+# On your VPS
+cd /opt/mcp-servers
+git clone https://github.com/hithereiamaliff/mcp-ghostcms.git ghostcms
+cd ghostcms
+
+# Build and start
+docker compose up -d --build
+
+# Check logs
+docker compose logs -f
+```
+
+### Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `/health` | Health check |
+| `/mcp` | MCP endpoint (with query params) |
+| `/analytics` | Analytics JSON data |
+| `/analytics/dashboard` | Visual analytics dashboard |
+| `/analytics/tools` | Tool usage statistics |
+
+## Firebase Analytics
+
+This MCP server uses Firebase Realtime Database for cloud-based analytics storage with local file backup as fallback.
+
+### Features
+
+- **Dual Storage**: Firebase (primary) + local file (backup)
+- **Persistent**: Data survives container rebuilds and deployments
+- **Real-time**: Updates every 60 seconds
+- **Dashboard**: Visual analytics at `/analytics/dashboard`
+
+### Data Tracked
+
+- Total requests and tool calls
+- Requests by method (GET, POST, etc.)
+- Requests by endpoint
+- Tool usage statistics
+- Client IPs and user agents
+- Hourly request trends
+- Recent tool call activity
+
+### Firebase Setup
+
+1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+2. Enable Realtime Database
+3. Generate service account credentials (Project Settings → Service Accounts)
+4. Copy credentials to your VPS:
+
+```bash
+# On VPS
+mkdir -p /opt/mcp-servers/ghostcms/.credentials
+# Copy firebase-service-account.json to this directory
+
+# Create Docker volume
+docker volume create ghostcms_firebase-credentials
+
+# Copy to volume with correct permissions
+docker run --rm \
+  -v ghostcms_firebase-credentials:/credentials \
+  -v /opt/mcp-servers/ghostcms/.credentials:/source:ro \
+  alpine sh -c "cp /source/firebase-service-account.json /credentials/ && chown -R 1001:1001 /credentials/"
+
+# Restart container
+docker compose down
+docker compose up -d
+```
+
+### Firebase Data Structure
+
+```
+mcp-analytics/
+  └── mcp-ghostcms/
+      ├── serverStartTime
+      ├── totalRequests
+      ├── totalToolCalls
+      ├── requestsByMethod
+      ├── requestsByEndpoint
+      ├── toolCalls
+      ├── recentToolCalls
+      ├── clientsByIp
+      ├── clientsByUserAgent
+      ├── hourlyRequests
+      └── lastUpdated
+```
+
+For detailed Firebase setup instructions, see [FIREBASE_SETUP.md](./FIREBASE_SETUP.md).
 
 ## Contributing
 

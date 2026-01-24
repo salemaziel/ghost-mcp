@@ -60,6 +60,8 @@ export function registerPostTools(server: McpServer) {
         };
       } catch (error: any) {
         const status = error?.response?.status ?? error?.status ?? "unknown";
+        const statusText = error?.response?.statusText ?? "";
+        const url = error?.config?.url ?? error?.request?.url ?? "unknown URL";
         const body = error?.response?.data ?? error?.data ?? error?.message ?? String(error);
         const bodyText = typeof body === "string" ? body : JSON.stringify(body, null, 2);
         return {
@@ -67,7 +69,7 @@ export function registerPostTools(server: McpServer) {
           content: [
             {
               type: "text",
-              text: `posts_browse failed. status=${status}\n${bodyText}`,
+              text: `posts_browse failed. status=${status} ${statusText}\nURL: ${url}\n${bodyText}`,
             },
           ],
         };
@@ -101,6 +103,8 @@ export function registerPostTools(server: McpServer) {
             };
         } catch (error: any) {
         const status = error?.response?.status ?? error?.status ?? "unknown";
+        const statusText = error?.response?.statusText ?? "";
+        const url = error?.config?.url ?? error?.request?.url ?? "unknown URL";
         const body = error?.response?.data ?? error?.data ?? error?.message ?? String(error);
         const bodyText = typeof body === "string" ? body : JSON.stringify(body, null, 2);
         return {
@@ -108,7 +112,7 @@ export function registerPostTools(server: McpServer) {
           content: [
             {
               type: "text",
-              text: `posts_read failed. status=${status}\n${bodyText}`,
+              text: `posts_read failed. status=${status} ${statusText}\nURL: ${url}\n${bodyText}`,
             },
           ],
         };
@@ -127,7 +131,10 @@ export function registerPostTools(server: McpServer) {
         }
         try {
             const token = generateGhostAdminToken(config.key);
-            const url = `${config.url}/ghost/api/admin/posts/`;
+            // Add source=html query param if html content is provided (Ghost 5.x uses Lexical format)
+            const url = args.html 
+                ? `${config.url}/ghost/api/admin/posts/?source=html`
+                : `${config.url}/ghost/api/admin/posts/`;
             const headers = {
                 'Authorization': `Ghost ${token}`
             };
@@ -142,6 +149,8 @@ export function registerPostTools(server: McpServer) {
             };
         } catch (error: any) {
         const status = error?.response?.status ?? error?.status ?? "unknown";
+        const statusText = error?.response?.statusText ?? "";
+        const url = error?.config?.url ?? error?.request?.url ?? "unknown URL";
         const body = error?.response?.data ?? error?.data ?? error?.message ?? String(error);
         const bodyText = typeof body === "string" ? body : JSON.stringify(body, null, 2);
         return {
@@ -149,7 +158,7 @@ export function registerPostTools(server: McpServer) {
           content: [
             {
               type: "text",
-              text: `posts_add failed. status=${status}\n${bodyText}`,
+              text: `posts_add failed. status=${status} ${statusText}\nURL: ${url}\n${bodyText}`,
             },
           ],
         };
@@ -168,11 +177,16 @@ export function registerPostTools(server: McpServer) {
         }
         try {
             const token = generateGhostAdminToken(config.key);
-            const url = `${config.url}/ghost/api/admin/posts/${args.id}/`;
+            // Add source=html query param if html content is provided (Ghost 5.x uses Lexical format)
+            const url = args.html
+                ? `${config.url}/ghost/api/admin/posts/${args.id}/?source=html`
+                : `${config.url}/ghost/api/admin/posts/${args.id}/`;
             const headers = {
                 'Authorization': `Ghost ${token}`
             };
-            const response = await axios.put(url, { posts: [args] }, { headers });
+            // Extract id from args - Ghost API expects id only in URL, not in request body
+            const { id, ...postData } = args;
+            const response = await axios.put(url, { posts: [postData] }, { headers });
             return {
                 content: [
                     {
@@ -183,6 +197,8 @@ export function registerPostTools(server: McpServer) {
             };
         } catch (error: any) {
         const status = error?.response?.status ?? error?.status ?? "unknown";
+        const statusText = error?.response?.statusText ?? "";
+        const url = error?.config?.url ?? error?.request?.url ?? "unknown URL";
         const body = error?.response?.data ?? error?.data ?? error?.message ?? String(error);
         const bodyText = typeof body === "string" ? body : JSON.stringify(body, null, 2);
         return {
@@ -190,7 +206,7 @@ export function registerPostTools(server: McpServer) {
           content: [
             {
               type: "text",
-              text: `posts_edit failed. status=${status}\n${bodyText}`,
+              text: `posts_edit failed. status=${status} ${statusText}\nURL: ${url}\n${bodyText}`,
             },
           ],
         };
@@ -224,6 +240,8 @@ export function registerPostTools(server: McpServer) {
             };
         } catch (error: any) {
         const status = error?.response?.status ?? error?.status ?? "unknown";
+        const statusText = error?.response?.statusText ?? "";
+        const url = error?.config?.url ?? error?.request?.url ?? "unknown URL";
         const body = error?.response?.data ?? error?.data ?? error?.message ?? String(error);
         const bodyText = typeof body === "string" ? body : JSON.stringify(body, null, 2);
         return {
@@ -231,7 +249,7 @@ export function registerPostTools(server: McpServer) {
           content: [
             {
               type: "text",
-              text: `posts_delete failed. status=${status}\n${bodyText}`,
+              text: `posts_delete failed. status=${status} ${statusText}\nURL: ${url}\n${bodyText}`,
             },
           ],
         };
