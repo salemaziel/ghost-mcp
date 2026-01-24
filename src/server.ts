@@ -104,8 +104,24 @@ async function main() {
     if (transportType === 'streamable') {
         const app = express();
 
-        // Use CORS to allow requests from any origin (configure as needed for production)
-        app.use(cors());
+        // Configure CORS: restrict by default, allow override via environment variables.
+        const allowedOriginsEnv = process.env.CORS_ORIGIN || process.env.CORS_ORIGINS;
+        const allowedOrigins = allowedOriginsEnv
+            ? allowedOriginsEnv.split(",").map(origin => origin.trim()).filter(Boolean)
+            : [`http://localhost:${port}`, `http://127.0.0.1:${port}`];
+
+        app.use(cors({
+            origin: (origin, callback) => {
+                // Allow non-browser or same-origin requests with no Origin header
+                if (!origin) {
+                    return callback(null, true);
+                }
+                if (allowedOrigins.includes(origin)) {
+                    return callback(null, true);
+                }
+                return callback(new Error("Not allowed by CORS"));
+            },
+        }));
         app.use(express.json());
 
         const transports = new Map<string, StreamableHTTPServerTransport>();
