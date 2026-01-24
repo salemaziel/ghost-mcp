@@ -42,11 +42,15 @@ class FirebaseAnalytics {
 
       const serviceAccount = JSON.parse(fs.readFileSync(credentialPath, 'utf-8'));
 
+      // Use configurable database URL or construct from project ID
+      const databaseURL = process.env.FIREBASE_DATABASE_URL || 
+        `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`;
+
       // Initialize Firebase Admin if not already initialized
       if (!admin.apps.length) {
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
-          databaseURL: `https://${serviceAccount.project_id}-default-rtdb.asia-southeast1.firebasedatabase.app`
+          databaseURL
         });
       }
 

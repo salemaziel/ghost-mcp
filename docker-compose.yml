@@ -17,6 +17,8 @@ services:
       - GHOST_API_URL=${GHOST_API_URL:-}
       - GHOST_ADMIN_API_KEY=${GHOST_ADMIN_API_KEY:-}
       - GHOST_API_VERSION=${GHOST_API_VERSION:-v5.0}
+      # Optional: Firebase Database URL (defaults to standard URL if not set)
+      - FIREBASE_DATABASE_URL=${FIREBASE_DATABASE_URL:-}
     volumes:
       - analytics-data:/app/data
       - firebase-credentials:/app/.credentials:ro
