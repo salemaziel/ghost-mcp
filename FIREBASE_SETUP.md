@@ -8,6 +8,24 @@ This MCP server uses Firebase Realtime Database for cloud-based analytics storag
 - Firebase Realtime Database enabled
 - Service account credentials downloaded
 
+## Configuration
+
+### Firebase Database URL
+
+By default, the server constructs the database URL from your project ID using the standard format:
+```
+https://{project_id}-default-rtdb.firebaseio.com
+```
+
+If your Firebase Realtime Database is in a different region (e.g., `asia-southeast1`, `europe-west1`), you can set the `FIREBASE_DATABASE_URL` environment variable in your `docker-compose.yml`:
+
+```yaml
+environment:
+  - FIREBASE_DATABASE_URL=https://your-project-default-rtdb.asia-southeast1.firebasedatabase.app
+```
+
+You can find your database URL in the Firebase Console under **Realtime Database > Data**.
+
 ## Setup Instructions
 
 ### 1. On Your VPS
@@ -46,7 +64,7 @@ docker volume create ghostcms_firebase-credentials
 docker run --rm \
   -v ghostcms_firebase-credentials:/credentials \
   -v $(pwd)/.credentials:/source:ro \
-  alpine cp /source/firebase-service-account.json /credentials/
+  alpine sh -c "cp /source/firebase-service-account.json /credentials/ && chown -R 1001:1001 /credentials"
 ```
 
 ### 3. Rebuild and Restart Container
@@ -132,7 +150,7 @@ ls -la /opt/mcp-servers/ghostcms/.credentials/
 docker run --rm \
   -v ghostcms_firebase-credentials:/credentials \
   -v /opt/mcp-servers/ghostcms/.credentials:/source:ro \
-  alpine cp /source/firebase-service-account.json /credentials/
+  alpine sh -c "cp /source/firebase-service-account.json /credentials/ && chown -R 1001:1001 /credentials"
 ```
 
 ### Permission denied

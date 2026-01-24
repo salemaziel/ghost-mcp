@@ -507,7 +507,7 @@ app.get('/analytics/dashboard', (req: Request, res: Response) => {
     
     async function loadData() {
       try {
-        const basePath = window.location.pathname.replace(/\\/analytics\\/dashboard\\/?$/, '');
+        const basePath = window.location.pathname.replace(/\/analytics\/dashboard\/?$/, '');
         const res = await fetch(basePath + '/analytics');
         const data = await res.json();
         updateDashboard(data);
@@ -599,15 +599,33 @@ app.get('/analytics/dashboard', (req: Request, res: Response) => {
         list.innerHTML = '<div class="loading">No recent tool calls</div>';
         return;
       }
-      list.innerHTML = recentCalls.slice(0, 15).map(call => \`
-        <div class="activity-item">
-          <div>
-            <span class="activity-tool">\${call.tool}</span>
-            <div class="activity-ip">\${call.clientIp} - \${call.userAgent}</div>
-          </div>
-          <span class="activity-time">\${new Date(call.timestamp).toLocaleString()}</span>
-        </div>
-      \`).join('');
+      list.innerHTML = ''; // Clear the list
+      recentCalls.slice(0, 15).forEach(call => {
+        const item = document.createElement('div');
+        item.className = 'activity-item';
+
+        const details = document.createElement('div');
+        
+        const toolSpan = document.createElement('span');
+        toolSpan.className = 'activity-tool';
+        toolSpan.textContent = call.tool;
+        
+        const ipDiv = document.createElement('div');
+        ipDiv.className = 'activity-ip';
+        ipDiv.textContent = call.clientIp + ' - ' + call.userAgent;
+
+        details.appendChild(toolSpan);
+        details.appendChild(ipDiv);
+
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'activity-time';
+        timeSpan.textContent = new Date(call.timestamp).toLocaleString();
+
+        item.appendChild(details);
+        item.appendChild(timeSpan);
+        
+        list.appendChild(item);
+      });
     }
     
     loadData();
