@@ -2,8 +2,11 @@ import 'dotenv/config'; // Load .env file before anything else
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
 import cors from "cors";
+import { randomUUID } from "node:crypto";
 
 /**
  * Creates and initializes the MCP server.
@@ -86,13 +89,103 @@ export async function createServer() {
 async function main() {
     // Parse command line arguments
     const args = process.argv.slice(2);
-    const transportType = args.includes('--transport') ? args[args.indexOf('--transport') + 1] : 'stdio';
-    const port = args.includes('--port') ? parseInt(args[args.indexOf('--port') + 1]) : 3000;
+    const getArgValue = (flag: string) => {
+        const index = args.indexOf(flag);
+        return index >= 0 ? args[index + 1] : undefined;
+    };
+    const transportArg = getArgValue('--transport');
+    const portArg = getArgValue('--port');
+    const transportType = transportArg ?? (portArg ? 'streamable' : 'stdio');
+    const port = portArg ? parseInt(portArg, 10) : 3000;
 
     const server = await createServer();
 
     // Handle transports
-    if (transportType === 'sse') {
+    if (transportType === 'streamable') {
+        const app = express();
+
+        // Configure CORS: restrict by default, allow override via environment variables.
+        const allowedOriginsEnv = process.env.CORS_ORIGIN || process.env.CORS_ORIGINS;
+        const allowedOrigins = allowedOriginsEnv
+            ? allowedOriginsEnv.split(",").map(origin => origin.trim()).filter(Boolean)
+            : [`http://localhost:${port}`, `http://127.0.0.1:${port}`];
+
+        app.use(cors({
+            origin: (origin, callback) => {
+                // Allow non-browser or same-origin requests with no Origin header
+                if (!origin) {
+                    return callback(null, true);
+                }
+                if (allowedOrigins.includes(origin)) {
+                    return callback(null, true);
+                }
+                return callback(new Error("Not allowed by CORS"));
+            },
+        }));
+        app.use(express.json());
+
+        const transports = new Map<string, StreamableHTTPServerTransport>();
+
+        app.post("/mcp", async (req: any, res: any) => {
+            try {
+                const sessionHeader = req.headers["mcp-session-id"];
+                const sessionId = Array.isArray(sessionHeader) ? sessionHeader[0] : sessionHeader;
+                let transport = sessionId ? transports.get(sessionId) : undefined;
+
+                if (!transport) {
+                    if (!isInitializeRequest(req.body)) {
+                        res.status(400).json({
+                            jsonrpc: "2.0",
+                            error: {
+                                code: -32000,
+                                message: "Bad Request: missing or invalid session ID",
+                            },
+                            id: null,
+                        });
+                        return;
+                    }
+
+                    transport = new StreamableHTTPServerTransport({
+                        sessionIdGenerator: () => randomUUID(),
+                        onsessioninitialized: (newSessionId) => {
+                            if (!transport) {
+                                console.error("Session initialized but transport is undefined for session", newSessionId);
+                                return;
+                            }
+                            transports.set(newSessionId, transport);
+                        },
+                    });
+
+                    transport.onclose = () => {
+                        if (transport?.sessionId) {
+                            transports.delete(transport.sessionId);
+                        }
+                    };
+
+                    await server.connect(transport);
+                }
+
+                await transport.handleRequest(req, res, req.body);
+            } catch (error) {
+                console.error("Error handling MCP streamable request:", error);
+                if (!res.headersSent) {
+                    res.status(500).json({
+                        jsonrpc: "2.0",
+                        error: {
+                            code: -32603,
+                            message: "Internal server error",
+                        },
+                        id: null,
+                    });
+                }
+            }
+        });
+
+        app.listen(port, () => {
+            console.error(`Ghost MCP Server running on streamable HTTP at http://localhost:${port}/mcp`);
+            console.error(`Use 'http://localhost:${port}/mcp' as the Server URL in your MCP Client`);
+        });
+    } else if (transportType === 'sse') {
         const app = express();
         
         // Use CORS to allow requests from any origin (configure as needed for production)
@@ -101,7 +194,7 @@ async function main() {
 
         let transport: SSEServerTransport;
 
-        app.get("/sse", async (req, res) => {
+        app.get("/sse", async (req: any, res: any) => {
             console.error(`New SSE connection`);
             transport = new SSEServerTransport("/sse", res);
             await server.connect(transport);
@@ -114,7 +207,7 @@ async function main() {
             });
         });
 
-        app.post("/sse", async (req, res) => {
+        app.post("/sse", async (req: any, res: any) => {
             if (!transport) {
                 res.status(400).send("No active connection");
                 return;
@@ -142,4 +235,3 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1].endsWith(
         process.exit(1);
     });
 }
-
